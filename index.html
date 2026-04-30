@@ -305,6 +305,66 @@
 
     const params = new URLSearchParams(window.location.search);
 
+    function expandBookingType(code) {
+      switch ((code || '').toUpperCase()) {
+        case 'CS': return 'Cabin Stay';
+        case 'DV': return 'Day Visit';
+        case 'EO': return 'Experience Only';
+        case 'FX': return 'Full Stay + Experience';
+        default: return code || fallbackData.bookingType;
+      }
+    }
+
+    function expandPayment(code) {
+      switch ((code || '').toUpperCase()) {
+        case 'R': return 'Pay at Resort';
+        case 'C': return 'Credit / Debit Card';
+        case 'G': return 'GCash / Maya';
+        case 'B': return 'Bank Transfer';
+        default: return code || fallbackData.paymentMethod;
+      }
+    }
+
+    function expandStatus(code) {
+      switch ((code || '').toUpperCase()) {
+        case 'C': return 'Booking Confirmed';
+        default: return code || fallbackData.status;
+      }
+    }
+
+    function normalizeCompactDate(value) {
+      if (!value) return fallbackData.dateWindow;
+      const parts = value.split('-');
+      const formatOne = (part) => {
+        if (!/^\d{8}$/.test(part)) return part;
+        const year = part.slice(0, 4);
+        const month = part.slice(4, 6);
+        const day = part.slice(6, 8);
+        const date = new Date(`${year}-${month}-${day}T00:00:00`);
+        return Number.isNaN(date.getTime())
+          ? part
+          : date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      };
+      return parts.map(formatOne).join(' to ');
+    }
+
+    function normalizeGuestCount(value) {
+      if (!value) return fallbackData.guestCount;
+      const match = /^(\d+)A(?:(\d+)C)?$/i.exec(value);
+      if (!match) return value;
+      const adults = Number(match[1] || 0);
+      const children = Number(match[2] || 0);
+      if (children > 0) return `${adults} adult${adults === 1 ? '' : 's'}, ${children} child${children === 1 ? '' : 'ren'}`;
+      return `${adults} adult${adults === 1 ? '' : 's'}`;
+    }
+
+    function normalizeAmount(value) {
+      if (!value) return fallbackData.totalAmount;
+      if (/^PHP/i.test(value)) return value;
+      const numeric = Number(value.replace(/,/g, ''));
+      return Number.isFinite(numeric) ? `PHP ${numeric.toLocaleString()}` : value;
+    }
+
     function decodeBase64Url(value) {
       if (!value) return null;
       try {
@@ -320,14 +380,14 @@
     const data = {
       reservationId: params.get('i') || params.get('id') || params.get('r') || params.get('ref') || fallbackData.reservationId,
       guestName: packed.g || params.get('guest') || fallbackData.guestName,
-      bookingType: packed.t || params.get('type') || fallbackData.bookingType,
-      dateWindow: packed.dw || params.get('dates') || fallbackData.dateWindow,
-      guestCount: packed.gc || params.get('guests') || fallbackData.guestCount,
+      bookingType: expandBookingType(packed.t || params.get('type') || fallbackData.bookingType),
+      dateWindow: normalizeCompactDate(packed.dw || params.get('dates') || fallbackData.dateWindow),
+      guestCount: normalizeGuestCount(packed.gc || params.get('guests') || fallbackData.guestCount),
       primaryItem: packed.pi || params.get('item') || fallbackData.primaryItem,
       arrivalTime: packed.at || params.get('arrival') || fallbackData.arrivalTime,
-      paymentMethod: packed.pm || params.get('payment') || fallbackData.paymentMethod,
-      totalAmount: packed.ta || params.get('amount') || fallbackData.totalAmount,
-      status: packed.st || params.get('status') || fallbackData.status,
+      paymentMethod: expandPayment(packed.pm || params.get('payment') || fallbackData.paymentMethod),
+      totalAmount: normalizeAmount(packed.ta || params.get('amount') || fallbackData.totalAmount),
+      status: expandStatus(packed.st || params.get('status') || fallbackData.status),
       qrImage: params.get('qr') || fallbackData.qrImage
     };
 
