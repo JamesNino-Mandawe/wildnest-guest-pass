@@ -304,17 +304,30 @@
     };
 
     const params = new URLSearchParams(window.location.search);
+
+    function decodeBase64Url(value) {
+      if (!value) return null;
+      try {
+        let base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+        while (base64.length % 4) base64 += '=';
+        return JSON.parse(atob(base64));
+      } catch {
+        return null;
+      }
+    }
+
+    const packed = decodeBase64Url(params.get('d')) || {};
     const data = {
-      reservationId: params.get('id') || fallbackData.reservationId,
-      guestName: params.get('guest') || fallbackData.guestName,
-      bookingType: params.get('type') || fallbackData.bookingType,
-      dateWindow: params.get('dates') || fallbackData.dateWindow,
-      guestCount: params.get('guests') || fallbackData.guestCount,
-      primaryItem: params.get('item') || fallbackData.primaryItem,
-      arrivalTime: params.get('arrival') || fallbackData.arrivalTime,
-      paymentMethod: params.get('payment') || fallbackData.paymentMethod,
-      totalAmount: params.get('amount') || fallbackData.totalAmount,
-      status: params.get('status') || fallbackData.status,
+      reservationId: params.get('i') || params.get('id') || params.get('r') || params.get('ref') || fallbackData.reservationId,
+      guestName: packed.g || params.get('guest') || fallbackData.guestName,
+      bookingType: packed.t || params.get('type') || fallbackData.bookingType,
+      dateWindow: packed.dw || params.get('dates') || fallbackData.dateWindow,
+      guestCount: packed.gc || params.get('guests') || fallbackData.guestCount,
+      primaryItem: packed.pi || params.get('item') || fallbackData.primaryItem,
+      arrivalTime: packed.at || params.get('arrival') || fallbackData.arrivalTime,
+      paymentMethod: packed.pm || params.get('payment') || fallbackData.paymentMethod,
+      totalAmount: packed.ta || params.get('amount') || fallbackData.totalAmount,
+      status: packed.st || params.get('status') || fallbackData.status,
       qrImage: params.get('qr') || fallbackData.qrImage
     };
 
